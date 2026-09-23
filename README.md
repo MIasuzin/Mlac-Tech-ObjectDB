@@ -4,6 +4,8 @@ MTDB is a compact single-file JSON storage library for Node.js.
 
 It provides a synchronous filesystem-like API for storing JSON documents inside a single `.mtdb` file, with crash recovery, checksums, compaction and single-writer protection.
 
+![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+
 ```js
 const mtdb = require('mtdb');
 
