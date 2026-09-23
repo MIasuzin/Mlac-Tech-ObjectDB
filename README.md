@@ -1,63 +1,60 @@
 # MTDB
 
-MTDB is a compact single-file JSON storage library for Node.js.
+MTDB — компактное JSON-хранилище для Node.js, которое сохраняет всю базу данных в одном `.mtdb` файле.
 
-It provides a synchronous filesystem-like API for storing JSON documents inside a single `.mtdb` file, with crash recovery, checksums, compaction and single-writer protection.
+Библиотека предоставляет простой синхронный API, похожий на работу с виртуальной файловой системой:
 
-```js
-const mtdb = require('mtdb');
-
-const db = mtdb.open('./data.mtdb');
-
-db.mkdir('users');
-
-db.write('users/1.json', {
-  id: 1,
-  name: 'Alice'
-});
-
-console.log(
-  db.read('users/1.json')
-);
-
-db.close();
+```text
+data.mtdb
+└── users/
+    ├── 1.json
+    └── 2.json
 ```
 
-## Features
+При этом JSON-файлы и каталоги не создаются на диске отдельно — всё хранится внутри одного файла базы.
 
-* Single `.mtdb` database file
-* Synchronous API
-* JSON document storage
-* Virtual directories
-* Crash recovery
-* Record checksums
-* Durable writes with commit records
-* Rebuildable hash index
-* Single-writer protection between processes
-* Automatic stale writer-lock recovery
-* Database compaction
-* No runtime dependencies
-* CommonJS API
+## Возможности
 
-## Installation
+* один `.mtdb` файл для всей базы;
+* хранение JSON;
+* виртуальные каталоги;
+* синхронный API;
+* перезапись существующих документов;
+* удаление документов;
+* получение списка документов в каталоге;
+* crash recovery после аварийного завершения процесса;
+* CRC32-проверка записей;
+* журнал `RECORD + COMMIT`;
+* восстанавливаемый hash index;
+* защита от одновременного открытия несколькими writer-процессами;
+* автоматическое восстановление stale writer-lock;
+* compaction старых версий и удалённых данных;
+* отсутствие runtime-зависимостей;
+* CommonJS.
+
+MTDB предназначена для небольших локальных хранилищ, конфигураций, приложений, ботов, сервисов и других случаев, где полноценная SQL-база избыточна.
+
+## Установка
 
 ```bash
-npm install mtdb
+npm install @mlasuzin/mtdb
 ```
 
-## Quick start
+## Быстрый старт
 
 ```js
-const mtdb = require('mtdb');
+'use strict';
+
+const mtdb = require('@mlasuzin/mtdb');
 
 const db = mtdb.open('./data.mtdb');
 
 db.mkdir('users');
 
 db.write('users/1.json', {
-  id: 1,
-  username: 'alice',
-  active: true
+  name: 'Mlasuzin',
+  city: 'Kharkiv',
+  role: 'developer'
 });
 
 const user = db.read('users/1.json');
@@ -67,169 +64,115 @@ console.log(user);
 db.close();
 ```
 
-Output:
+Результат:
 
 ```js
 {
-  id: 1,
-  username: 'alice',
-  active: true
+  name: 'Mlasuzin',
+  city: 'Kharkiv',
+  role: 'developer'
 }
 ```
 
-## API
+Если `data.mtdb` ещё не существует, MTDB создаст его автоматически.
 
-MTDB exposes one module-level function:
+## Работа с данными
 
-```js
-mtdb.open(filePath);
-```
+### Создание пользователя
 
-An opened database exposes:
-
-```js
-db.mkdir(path);
-db.list(path);
-db.read(path);
-db.write(path, value);
-db.delete(path);
-db.compact();
-db.close();
-```
-
-Full API documentation:
-
-```text
-API.md
-```
-
-Error reference:
-
-```text
-ERRORS.md
-```
-
-## Opening a database
-
-```js
-const db = mtdb.open('./data.mtdb');
-```
-
-If the file does not exist, MTDB creates a new database.
-
-Database files must use the `.mtdb` extension.
-
-Only one writer may open a database at a time.
-
-A second writer receives:
-
-```text
-MTDB_ALREADY_OPEN
-```
-
-## Directories
-
-The database root exists implicitly.
-
-Root-level JSON can therefore be written directly:
-
-```js
-db.write('settings.json', {
-  enabled: true
-});
-```
-
-Nested JSON requires its parent directory to exist:
+Сначала создадим виртуальный каталог:
 
 ```js
 db.mkdir('users');
-
-db.write('users/1.json', {
-  id: 1
-});
 ```
 
-`mkdir()` creates the complete missing directory chain:
-
-```js
-db.mkdir('data/users/archive');
-```
-
-## Writing JSON
+Теперь сохраним пользователя:
 
 ```js
 db.write('users/1.json', {
-  id: 1,
-  name: 'Alice'
+  name: 'Mlasuzin',
+  city: 'Kharkiv',
+  role: 'developer'
 });
 ```
 
-Values are serialized using:
+`write()` принимает обычное JavaScript-значение и сериализует его через `JSON.stringify()`.
+
+### Чтение пользователя
 
 ```js
-JSON.stringify(value)
+const user = db.read('users/1.json');
+
+console.log(user);
 ```
 
-Writing to an existing path replaces its current logical value:
-
-```js
-db.write('users/1.json', {
-  version: 1
-});
-
-db.write('users/1.json', {
-  version: 2
-});
-```
-
-The current value is now:
+Получим:
 
 ```js
 {
-  version: 2
+  name: 'Mlasuzin',
+  city: 'Kharkiv',
+  role: 'developer'
 }
 ```
 
-Previous physical versions remain in the append-only history until compaction.
-
-## Reading JSON
-
-```js
-const value = db.read('users/1.json');
-```
-
-If the JSON does not exist or has been deleted:
-
-```js
-db.read('users/missing.json');
-```
-
-returns:
+Если документ не существует, `read()` возвращает:
 
 ```js
 undefined
 ```
 
-## Listing JSON
+### Изменение данных
 
-`list()` returns JSON files directly inside a directory.
+Чтобы изменить пользователя, достаточно прочитать документ, изменить его и записать обратно.
 
-It is not recursive.
+Например, перенесём пользователя из Kharkiv в Stara Zagora:
 
 ```js
-db.mkdir('users');
-db.mkdir('users/archive');
+const user = db.read('users/1.json');
 
-db.write('users/1.json', {});
-db.write('users/2.json', {});
-db.write('users/archive/3.json', {});
+user.city = 'Stara Zagora';
 
-console.log(
-  db.list('users')
-);
+db.write('users/1.json', user);
 ```
 
-Result:
+После этого:
+
+```js
+console.log(db.read('users/1.json'));
+```
+
+вернёт:
+
+```js
+{
+  name: 'Mlasuzin',
+  city: 'Stara Zagora',
+  role: 'developer'
+}
+```
+
+Старое значение физически может оставаться в журнале базы до выполнения `compact()`.
+
+### Добавление второго пользователя
+
+```js
+db.write('users/2.json', {
+  name: 'Alice',
+  city: 'Sofia',
+  role: 'designer'
+});
+```
+
+### Получение списка пользователей
+
+```js
+const users = db.list('users');
+
+console.log(users);
+```
+
+Результат:
 
 ```js
 [
@@ -238,51 +181,180 @@ Result:
 ]
 ```
 
-To list the implicit root:
+`list()` возвращает только документы непосредственно внутри указанного каталога и не выполняет рекурсивный обход.
 
-```js
-db.list('');
+Например:
+
+```text
+users/
+├── 1.json
+├── 2.json
+└── archive/
+    └── 3.json
 ```
 
-## Deleting JSON
+Вызов:
 
 ```js
-db.delete('users/1.json');
+db.list('users');
 ```
 
-Returns:
+вернёт только:
+
+```js
+[
+  'users/1.json',
+  'users/2.json'
+]
+```
+
+### Удаление пользователя
+
+```js
+const deleted = db.delete('users/2.json');
+
+console.log(deleted);
+```
+
+Если документ существовал:
 
 ```js
 true
 ```
 
-when an existing JSON document was deleted.
-
-Returns:
+Если документа уже нет:
 
 ```js
 false
 ```
 
-when the document does not exist or is already deleted.
+После удаления:
 
-Deleted values remain as tombstones in the physical history until compaction.
+```js
+db.read('users/2.json');
+```
+
+вернёт:
+
+```js
+undefined
+```
+
+Физически MTDB записывает tombstone. Старые данные удаляются при последующем `compact()`.
+
+## Каталоги
+
+Корневой каталог существует неявно.
+
+Поэтому можно сразу записывать JSON в root:
+
+```js
+db.write('settings.json', {
+  enabled: true
+});
+```
+
+Для вложенных документов родительский каталог должен существовать:
+
+```js
+db.mkdir('users');
+
+db.write('users/1.json', {
+  name: 'Mlasuzin'
+});
+```
+
+`mkdir()` умеет создавать всю цепочку каталогов:
+
+```js
+db.mkdir('data/users/archive');
+```
+
+Будут созданы:
+
+```text
+data
+data/users
+data/users/archive
+```
+
+Повторное создание существующего каталога безопасно:
+
+```js
+db.mkdir('users'); // true
+db.mkdir('users'); // false
+```
+
+## Пути
+
+Внутри MTDB используются относительные пути:
+
+```text
+settings.json
+users/1.json
+users/archive/100.json
+```
+
+Обратный слеш автоматически преобразуется в `/`.
+
+Поэтому:
+
+```js
+db.read('users\\1.json');
+```
+
+эквивалентно:
+
+```js
+db.read('users/1.json');
+```
+
+JSON-пути должны заканчиваться на `.json`.
+
+Допустимо:
+
+```text
+users/1.json
+settings.JSON
+data/items/test.Json
+```
+
+Абсолютные пути и переходы через родительские каталоги запрещены:
+
+```text
+/users/1.json
+C:/users/1.json
+C:users/1.json
+users/../1.json
+```
 
 ## Compaction
 
-MTDB uses an append-only mutation history.
+MTDB использует append-only журнал.
 
-Repeated writes and deletes therefore increase the database file size over time.
+При повторных изменениях одного документа старые версии продолжают физически находиться в `.mtdb` файле.
 
-Use:
+Например:
+
+```js
+db.write('users/1.json', {
+  city: 'Kharkiv'
+});
+
+db.write('users/1.json', {
+  city: 'Stara Zagora'
+});
+```
+
+Для удаления устаревшей истории можно выполнить:
 
 ```js
 const result = db.compact();
+
+console.log(result);
 ```
 
-to rebuild the database with only its current logical state.
-
-Example result:
+Пример результата:
 
 ```js
 {
@@ -298,29 +370,46 @@ Example result:
 }
 ```
 
-`compact()` is synchronous and blocks other operations on the same database instance until it completes.
+`compact()`:
 
-MTDB validates the new compacted file before replacing the current database.
+* сохраняет актуальные JSON;
+* сохраняет актуальные каталоги;
+* удаляет старые версии документов;
+* удаляет tombstone;
+* перестраивает hash index;
+* проверяет новый файл перед заменой основной базы.
 
-## Closing
+Операция полностью синхронная.
+
+## Закрытие базы
+
+После завершения работы базу необходимо закрыть:
 
 ```js
 db.close();
 ```
 
-A successful first close returns:
+Первый успешный вызов возвращает:
 
 ```js
 true
 ```
 
-Calling it again returns:
+Повторный:
 
 ```js
 false
 ```
 
-After close, database operations throw:
+После `close()` экземпляр использовать нельзя.
+
+```js
+db.close();
+
+db.read('settings.json');
+```
+
+завершится ошибкой:
 
 ```text
 MTDB_CLOSED
@@ -328,200 +417,244 @@ MTDB_CLOSED
 
 ## Crash recovery
 
-MTDB uses a record + commit journal protocol.
+MTDB использует журнал операций с отдельными `COMMIT`-записями.
 
-A mutation is not considered committed simply because its data record exists.
-
-When a database is opened after an unclean shutdown, MTDB scans the journal and rebuilds its index from committed operations.
-
-Incomplete trailing operations are discarded.
-
-Committed records with damaged structure or invalid checksums are not silently ignored.
-
-Depending on the corruption, opening the database may fail with errors such as:
+Упрощённо запись выглядит так:
 
 ```text
-MTDB_CORRUPTED_RECORD
-MTDB_CORRUPTED_LOG
-MTDB_CORRUPTED_FILE
+DIRTY
+
+WRITE
+COMMIT
+fsync
+
+update index
+fsync
 ```
 
-See `ERRORS.md` for details.
+Если процесс аварийно завершится во время записи, при следующем `open()` MTDB восстанавливает индекс из подтверждённых операций.
 
-## Recovery-required state
+Незавершённый хвост журнала отбрасывается.
 
-An I/O error may occur after only part of a mutation has reached disk.
+Подтверждённые повреждённые данные при этом не игнорируются молча — MTDB возвращает ошибку повреждения.
 
-When MTDB can no longer safely continue using the current runtime state, the database instance enters a recovery-required state.
-
-Further operations throw:
-
-```text
-MTDB_RECOVERY_REQUIRED
-```
-
-Only `close()` should then be used.
-
-Reopen the database before continuing:
+Пример обычного восстановления:
 
 ```js
-db.close();
-
-const db2 = mtdb.open('./data.mtdb');
+const db = mtdb.open('./data.mtdb');
 ```
 
-Recovery is performed during `open()` when required.
+Если предыдущий процесс завершился некорректно и база осталась в состоянии `DIRTY`, необходимый recovery выполняется автоматически во время открытия.
 
-## Writer protection
+## Single writer
 
-MTDB allows only one writer for a physical database file.
-
-Protection includes:
-
-* duplicate opens in the same process;
-* writer processes competing for the same database;
-* stale writer locks after process termination;
-* rejection of symbolic-link writer aliases;
-* rejection of hard-linked database files.
-
-MTDB intentionally prefers refusing access over risking multiple concurrent writers.
-
-## Paths
-
-MTDB uses virtual relative paths.
-
-Valid examples:
-
-```text
-settings.json
-users/1.json
-users/archive/1.json
-```
-
-Backslashes are normalized to `/`:
+Один `.mtdb` файл может быть открыт только одним writer-процессом одновременно.
 
 ```js
-db.read('users\\1.json');
+const first = mtdb.open('./data.mtdb');
+const second = mtdb.open('./data.mtdb');
 ```
 
-is equivalent to:
-
-```js
-db.read('users/1.json');
-```
-
-Invalid examples:
+Второй вызов завершится:
 
 ```text
-/users/1.json
-C:/users/1.json
-C:users/1.json
-users//1.json
-users/../1.json
-users/
+MTDB_ALREADY_OPEN
 ```
 
-JSON paths must end with `.json`.
+MTDB также защищается от обхода writer-lock через symbolic link и hard link.
 
-Path segments `.` and `..` are not allowed.
+После аварийного завершения процесса stale writer-lock может быть восстановлен автоматически при следующем открытии базы.
 
-## Limits
+## Обработка ошибок
 
-Maximum JSON size:
+Все ошибки MTDB являются обычными объектами `Error`.
 
-```text
-100 MiB
-```
-
-Maximum normalized path size:
-
-```text
-1024 UTF-8 bytes
-```
-
-Database format:
-
-```text
-MTDB format version 2
-```
-
-## Current limitations
-
-MTDB currently:
-
-* uses a synchronous API;
-* supports JSON only;
-* supports one writer per database;
-* has no read-only API;
-* has no transactions;
-* has no query language;
-* has no secondary indexes;
-* has no `find()` API;
-* has no `exists()` API;
-* has no watchers;
-* has no directory deletion API;
-* does not run compaction automatically.
-
-MTDB is intended as a small embedded storage layer rather than a replacement for a relational or distributed database.
-
-## Error handling
-
-All MTDB-specific errors expose:
+Для программной обработки необходимо использовать:
 
 ```js
 error.code
 ```
 
-Example:
+Например:
 
 ```js
 try {
-  db.write('users/1.json', value);
+  db.write('users/1.json', {
+    name: 'Mlasuzin'
+  });
 }
 
 catch (error) {
   if (error.code === 'MTDB_JSON_TOO_LARGE') {
-    console.error('JSON is too large');
+    console.error('JSON слишком большой');
+    return;
   }
 
   throw error;
 }
 ```
 
-Do not rely on `error.message` for program logic.
+Не рекомендуется использовать `error.message` как часть логики приложения — текст сообщения предназначен для диагностики.
 
-See:
+### Recovery required
+
+Если во время изменения базы произошла I/O-ошибка и MTDB больше не может гарантировать корректность текущего runtime-состояния, экземпляр переводится в состояние:
 
 ```text
+MTDB_RECOVERY_REQUIRED
+```
+
+После этого необходимо закрыть базу и открыть её снова:
+
+```js
+try {
+  db.write('users/1.json', user);
+}
+
+catch (error) {
+  try {
+    db.close();
+  }
+
+  catch {}
+
+  throw error;
+}
+```
+
+Затем:
+
+```js
+const db = mtdb.open('./data.mtdb');
+```
+
+Recovery при необходимости будет выполнен во время открытия.
+
+## API
+
+MTDB экспортирует:
+
+```js
+const mtdb = require('@mlasuzin/mtdb');
+
+const db = mtdb.open(filePath);
+```
+
+Экземпляр базы предоставляет:
+
+```js
+db.mkdir(path);
+db.list(path);
+db.read(path);
+db.write(path, value);
+db.delete(path);
+db.compact();
+db.close();
+```
+
+Кратко:
+
+| Метод                   | Назначение                      | Результат           |
+| ----------------------- | ------------------------------- | ------------------- |
+| `mtdb.open(path)`       | Открывает или создаёт базу      | `Database`          |
+| `db.mkdir(path)`        | Создаёт каталог                 | `boolean`           |
+| `db.list(path)`         | Возвращает JSON внутри каталога | `string[]`          |
+| `db.read(path)`         | Читает JSON                     | value / `undefined` |
+| `db.write(path, value)` | Создаёт или перезаписывает JSON | `true`              |
+| `db.delete(path)`       | Удаляет JSON                    | `boolean`           |
+| `db.compact()`          | Удаляет устаревшую историю      | `object`            |
+| `db.close()`            | Закрывает базу                  | `boolean`           |
+
+## Ограничения
+
+Текущая версия MTDB:
+
+* использует синхронный API;
+* работает только с JSON;
+* поддерживает одного writer на базу;
+* не имеет read-only API;
+* не имеет транзакций;
+* не имеет SQL или query language;
+* не имеет secondary indexes;
+* не имеет `find()`;
+* не имеет `exists()`;
+* не имеет watchers;
+* не поддерживает удаление каталогов;
+* не выполняет автоматический `compact()`.
+
+Максимальный размер одного сериализованного JSON:
+
+```text
+100 MiB
+```
+
+Максимальная длина внутреннего пути:
+
+```text
+1024 байта UTF-8
+```
+
+Текущая версия формата базы:
+
+```text
+2
+```
+
+## Формат хранения
+
+Файл MTDB состоит из:
+
+```text
++-----------------------------+
+| Header                      |
+| 4096 bytes                  |
++-----------------------------+
+| Hash bucket index           |
+| 65536 × 8 bytes             |
++-----------------------------+
+| Append-only record journal  |
+| variable size               |
++-----------------------------+
+```
+
+Для поиска документов используется 32-битный FNV-1a hash.
+
+Коллизии разрешаются через цепочки записей внутри bucket.
+
+Каждая запись защищена CRC32 checksum.
+
+Hash index не является единственным источником истины: после аварийного завершения он может быть полностью восстановлен из подтверждённого журнала.
+
+Подробнее устройство бинарного формата описано в:
+
+```text
+FORMAT.md
+```
+
+## Документация
+
+Подробная документация находится в репозитории:
+
+```text
+API.md
 ERRORS.md
+FORMAT.md
+CHANGELOG.md
 ```
 
-for the complete error reference.
+* `API.md` — полный публичный API;
+* `ERRORS.md` — ошибки и правила восстановления;
+* `FORMAT.md` — бинарный формат `.mtdb`;
+* `CHANGELOG.md` — история изменений.
 
-## Database files
-
-A database normally consists of:
+## Требования
 
 ```text
-data.mtdb
+Node.js >= 18
 ```
 
-During operation MTDB may also temporarily create internal files such as:
+Runtime-зависимости отсутствуют.
 
-```text
-data.mtdb.lock
-data.mtdb.lock.guard
-data.mtdb.create.tmp
-data.mtdb.compact.tmp
-```
+## Лицензия
 
-These files are implementation details.
-
-Do not modify or remove them while an MTDB process may be using the database.
-
-## Documentation
-
-* `API.md` — public API reference
-* `ERRORS.md` — error codes and recovery behavior
-* `FORMAT.md` — on-disk format
-* `CHANGELOG.md` — release history
+Apache-2.0
