@@ -1,40 +1,45 @@
 # MTDB
 
-MTDB — компактное JSON-хранилище для Node.js, которое сохраняет всю базу данных в одном `.mtdb` файле.
+MTDB is a compact single-file JSON storage library for Node.js.
 
-Библиотека предоставляет простой синхронный API, похожий на работу с виртуальной файловой системой:
+It provides a synchronous filesystem-like API for storing JSON documents inside a single `.mtdb` file, with crash recovery, checksums, compaction and single-writer protection.
 
-```text
-data.mtdb
-└── users/
-    ├── 1.json
-    └── 2.json
+```js
+const mtdb = require('mtdb');
+
+const db = mtdb.open('./data.mtdb');
+
+db.mkdir('users');
+
+db.write('users/1.json', {
+  id: 1,
+  name: 'Alice'
+});
+
+console.log(
+  db.read('users/1.json')
+);
+
+db.close();
 ```
 
-При этом JSON-файлы и каталоги не создаются на диске отдельно — всё хранится внутри одного файла базы.
+## Features
 
-## Возможности
+* Single `.mtdb` database file
+* Synchronous API
+* JSON document storage
+* Virtual directories
+* Crash recovery
+* Record checksums
+* Durable writes with commit records
+* Rebuildable hash index
+* Single-writer protection between processes
+* Automatic stale writer-lock recovery
+* Database compaction
+* No runtime dependencies
+* CommonJS API
 
-* один `.mtdb` файл для всей базы;
-* хранение JSON;
-* виртуальные каталоги;
-* синхронный API;
-* перезапись существующих документов;
-* удаление документов;
-* получение списка документов в каталоге;
-* crash recovery после аварийного завершения процесса;
-* CRC32-проверка записей;
-* журнал `RECORD + COMMIT`;
-* восстанавливаемый hash index;
-* защита от одновременного открытия несколькими writer-процессами;
-* автоматическое восстановление stale writer-lock;
-* compaction старых версий и удалённых данных;
-* отсутствие runtime-зависимостей;
-* CommonJS.
-
-MTDB предназначена для небольших локальных хранилищ, конфигураций, приложений, ботов, сервисов и других случаев, где полноценная SQL-база избыточна.
-
-## Установка
+## Installation
 
 ```bash
 npm install @mlasuzin/mtdb

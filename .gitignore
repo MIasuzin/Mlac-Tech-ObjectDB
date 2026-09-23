@@ -1,5 +1,8 @@
 @'
 node_modules/
+test/
+hlam/
+
 *.tgz
 
 *.mtdb
@@ -7,9 +10,6 @@ node_modules/
 *.mtdb.lock.guard
 *.mtdb.create.tmp
 *.mtdb.compact.tmp
-
-test/.tmp-*/
-test/**/.tmp-*/
 
 .DS_Store
 Thumbs.db
