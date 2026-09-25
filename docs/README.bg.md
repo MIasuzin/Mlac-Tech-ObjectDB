@@ -6,7 +6,7 @@
 
 Библиотеката работи без отделен сървър, автоматично възстановява потвърдените записи след срив, проверява целостта на данните и премахва остарелите записи. Достатъчно е да отворите базата и да работите с документите.
 
-![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+![Mlac-Tech ObjectDB](imgs/banner.png)
 [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ## Възможности

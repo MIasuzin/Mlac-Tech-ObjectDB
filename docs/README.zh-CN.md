@@ -6,7 +6,7 @@
 
 该库无需独立服务器即可工作，并会在崩溃后自动恢复已提交的记录、检查数据完整性并清理过期记录。用户只需打开数据库并直接操作文档。
 
-![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+![Mlac-Tech ObjectDB](imgs/banner.png)
 [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ## 功能

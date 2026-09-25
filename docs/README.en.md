@@ -6,7 +6,7 @@
 
 The library works without a separate server, automatically recovers committed records after a crash, verifies data integrity, and removes obsolete records. You only need to open the database and work with documents.
 
-![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+![Mlac-Tech ObjectDB](imgs/banner.png)
 [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ## Features

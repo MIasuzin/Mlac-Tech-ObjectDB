@@ -6,7 +6,7 @@
 
 این کتابخانه بدون سرور جداگانه کار می‌کند، رکوردهای commit‌شده را پس از خرابی به‌طور خودکار بازیابی می‌کند، یکپارچگی داده‌ها را بررسی می‌کند و رکوردهای منسوخ را حذف می‌کند. کافی است پایگاه داده را باز کنید و با اسناد کار کنید.
 
-![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+![Mlac-Tech ObjectDB](imgs/banner.png)
 [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ## قابلیت‌ها
