@@ -1,10 +1,12 @@
-# MTDB
+# JSON с удобством и надёжностью базы данных
 
-MTDB is a compact single-file JSON storage library for Node.js.
+Mlac Tech ObjectDB помогает хранить данные небольшого Node.js-приложения, когда отдельные JSON-файлы уже неудобно поддерживать. Данные лежат в одном `.mtdb` файле, но в коде выглядят как JSON-документы в папках: их можно читать, записывать и менять вместе в транзакции.
 
-It provides a synchronous filesystem-like API for storing JSON documents inside a single `.mtdb` file, with crash recovery, checksums, compaction and single-writer protection.
+Библиотека работает без отдельного сервера и сама восстанавливает подтверждённые записи после сбоя, проверяет целостность данных и убирает устаревшие записи. Пользователю достаточно открыть базу и работать с документами.
 
 ![Mlac-Tech ObjectDB](docs/imgs/banner.png)
+
+**Язык:** [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ```js
 const mtdb = require('mtdb');
