@@ -1,6 +1,6 @@
 {
   "name": "@mlasuzin/mtdb",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "Compact single-file JSON storage for Node.js",
   "main": "index.js",
   "exports": {
