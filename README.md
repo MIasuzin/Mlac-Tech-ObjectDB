@@ -5,7 +5,7 @@
 Библиотека работает без отдельного сервера и сама восстанавливает подтверждённые записи после сбоя, проверяет целостность данных и убирает устаревшие записи. Пользователю достаточно открыть базу и работать с документами.
 
 ![Mlac-Tech ObjectDB](docs/imgs/banner.png)
-**Язык:** [Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
+[Русский](README.md) · [English](docs/README.en.md) · [فارسی](docs/README.fa.md) · [简体中文](docs/README.zh-CN.md) · [Български](docs/README.bg.md)
 
 ## Возможности
 
@@ -385,6 +385,120 @@ false
 | `db.close()` | Закрывает базу и освобождает writer-lock | `boolean` |
 
 Компактизация не является частью публичного API. MTDB выполняет её автоматически внутри библиотеки, когда это необходимо.
+
+## Пример использования
+
+Можно использовать как локальное хранилище состояния небольшого Node.js-сервиса.
+
+В этом примере база хранит пользователей, их настройки и активные сессии.
+
+```js
+const crypto = require('crypto');
+const mtdb = require('@mlasuzin/mtdb');
+
+const db = mtdb.open('./app.mtdb');
+
+try {
+  db.mkdir('users');
+  db.mkdir('sessions');
+
+  function createUser(id, name) {
+    const directory = `users/${id}`;
+    if (db.has(`${directory}/profile.json`)) {
+      throw new Error('User already exists');
+    }
+
+    db.mkdir(directory);
+
+    db.write(`${directory}/profile.json`, {
+      id,
+      name,
+      createdAt: Date.now(),
+      lastLoginAt: null
+    });
+
+    db.write(`${directory}/settings.json`, {
+      language: 'ru',
+      notifications: true
+    });
+  }
+
+  function login(id) {
+    const profilePath = `users/${id}/profile.json`;
+    if (!db.has(profilePath)) {
+      throw new Error('User not found');
+    }
+
+    const sessionId = crypto.randomUUID();
+    const profile = db.read(profilePath);
+
+    db.transaction((tx) => {
+      tx.write(profilePath, {
+        ...profile,
+        lastLoginAt: Date.now()
+      });
+
+      tx.write(`sessions/${sessionId}.json`, {
+        userId: id,
+        createdAt: Date.now()
+      });
+    });
+
+    return sessionId;
+  }
+
+  function updateSettings(id, settings) {
+    const path = `users/${id}/settings.json`;
+    const current = db.read(path);
+    db.write(path, {
+      ...current,
+      ...settings
+    });
+  }
+
+  function logout(sessionId) {
+    return db.delete(`sessions/${sessionId}.json`);
+  }
+
+  function deleteUser(id) {
+    const directory = `users/${id}`;
+    for (const path of db.list(directory, {
+      recursive: true
+    })) 
+
+    {
+      db.delete(path);
+    }
+
+    return db.rmdir(directory);
+  }
+
+  createUser('42', 'Alex');
+
+  updateSettings('42', {language: 'en'});
+  const sessionId = login('42');
+  console.log(
+    db.read('users/42/profile.json')
+  );
+
+  console.log(
+    db.list('users', {
+      recursive: true
+    })
+  );
+
+  logout(sessionId);
+  console.log(db.stats());
+  console.log(db.verify());
+  deleteUser('42');
+}
+
+finally {
+  db.close();
+}
+```
+
+Здесь MTDB используется как обычное встроенное хранилище приложения без отдельного сервера базы данных и без ручной работы с набором JSON-файлов.
 
 ## Документация
 
